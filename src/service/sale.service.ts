@@ -58,4 +58,23 @@ export class SaleService {
     }) {
         return await this.saleRepository.getAnnualRevenue(filters)
     }
+
+    async compareRevenue(filters: {
+        period1Start: string;
+        period1End: string;
+        period2Start: string;
+        period2End: string;
+        productId?: string;
+        categoryId?: string;
+    }) {
+        return await this.saleRepository.compareRevenue(filters)
+    }
+
+    async compareCategoryRevenue(filters: {
+        startDate?: string;
+        endDate?: string;
+        categoryIds?: string[];
+    }) {
+        return await this.saleRepository.compareCategoryRevenue(filters)
+    }
 } 

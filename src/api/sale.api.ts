@@ -254,6 +254,105 @@ router.get('/revenue/annual', async (req: Request, res: Response) => {
     }
 })
 
+router.get('/revenue/compare', async (req: Request, res: Response) => {
+    try {
+        const {
+            period1Start,
+            period1End,
+            period2Start,
+            period2End,
+            productId,
+            categoryId
+        } = req.query
+
+        if (!period1Start || !period1End || !period2Start || !period2End) {
+            return res.status(400).json({
+                success: false,
+                error: 'All period parameters (period1Start, period1End, period2Start, period2End) are required'
+            })
+        }
+
+        const dates = [period1Start, period1End, period2Start, period2End]
+        for (const date of dates) {
+            if (!isValidDate(date as string)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid date format. Use format (YYYY-MM-DD)'
+                })
+            }
+        }
+
+        const filters = {
+            period1Start: period1Start as string,
+            period1End: period1End as string,
+            period2Start: period2Start as string,
+            period2End: period2End as string,
+            productId: productId as string | undefined,
+            categoryId: categoryId as string | undefined
+        }
+
+        const comparison = await saleService.compareRevenue(filters)
+        res.json({
+            success: true,
+            data: comparison
+        })
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to compare revenue'
+        })
+    }
+})
+
+router.get('/revenue/compare/categories', async (req: Request, res: Response) => {
+    try {
+        const {
+            startDate,
+            endDate,
+            categoryIds
+        } = req.query
+
+        if (startDate && !isValidDate(startDate as string)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid startDate format. Use format (YYYY-MM-DD)'
+            })
+        }
+        if (endDate && !isValidDate(endDate as string)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid endDate format. Use format (YYYY-MM-DD)'
+            })
+        }
+
+        let parsedCategoryIds: string[] | undefined
+        if (categoryIds) {
+            if (typeof categoryIds === 'string') {
+                parsedCategoryIds = categoryIds.split(',')
+            } else if (Array.isArray(categoryIds)) {
+                parsedCategoryIds = categoryIds as string[]
+            }
+        }
+
+        const filters = {
+            startDate: startDate as string | undefined,
+            endDate: endDate as string | undefined,
+            categoryIds: parsedCategoryIds
+        }
+
+        const categoryComparison = await saleService.compareCategoryRevenue(filters)
+        res.json({
+            success: true,
+            data: categoryComparison
+        })
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to compare category revenue'
+        })
+    }
+})
+
 function isValidDate(dateString: string): boolean {
     const regex = /^\d{4}-\d{2}-\d{2}$/
     if (!regex.test(dateString)) return false

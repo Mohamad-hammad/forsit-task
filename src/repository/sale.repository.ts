@@ -299,4 +299,163 @@ export class SaleRepository {
             months_with_sales: Number(result.months_with_sales) || 0
         }))
     }
+
+    async compareRevenue(filters: {
+        period1Start: string;
+        period1End: string;
+        period2Start: string;
+        period2End: string;
+        productId?: string;
+        categoryId?: string;
+    }) {
+        const period1Query = this.repository
+            .createQueryBuilder('sale')
+            .select('SUM(sale.total_amount)', 'revenue')
+            .addSelect('COUNT(sale.id)', 'total_sales')
+            .addSelect('AVG(sale.total_amount)', 'average_order_value')
+            .addSelect('SUM(sale.quantity)', 'total_quantity')
+            .addSelect('COUNT(DISTINCT DATE(sale.sale_date))', 'days_with_sales')
+            .where('sale.sale_date BETWEEN :period1Start AND :period1End', {
+                period1Start: new Date(filters.period1Start),
+                period1End: new Date(filters.period1End)
+            })
+
+        const period2Query = this.repository
+            .createQueryBuilder('sale')
+            .select('SUM(sale.total_amount)', 'revenue')
+            .addSelect('COUNT(sale.id)', 'total_sales')
+            .addSelect('AVG(sale.total_amount)', 'average_order_value')
+            .addSelect('SUM(sale.quantity)', 'total_quantity')
+            .addSelect('COUNT(DISTINCT DATE(sale.sale_date))', 'days_with_sales')
+            .where('sale.sale_date BETWEEN :period2Start AND :period2End', {
+                period2Start: new Date(filters.period2Start),
+                period2End: new Date(filters.period2End)
+            })
+
+        if (filters.productId) {
+            period1Query.andWhere('sale.product_id = :productId', { productId: filters.productId })
+            period2Query.andWhere('sale.product_id = :productId', { productId: filters.productId })
+        }
+
+        if (filters.categoryId) {
+            period1Query
+                .leftJoin('sale.product', 'product')
+                .leftJoin('product.categoryRelation', 'category')
+                .andWhere('category.id = :categoryId', { categoryId: filters.categoryId })
+            period2Query
+                .leftJoin('sale.product', 'product')
+                .leftJoin('product.categoryRelation', 'category')
+                .andWhere('category.id = :categoryId', { categoryId: filters.categoryId })
+        }
+
+        const [period1Data, period2Data] = await Promise.all([
+            period1Query.getRawOne(),
+            period2Query.getRawOne()
+        ])
+
+        const calculatePercentageChange = (current: number, previous: number) => {
+            if (previous === 0) return current > 0 ? 100 : 0
+            return ((current - previous) / previous) * 100
+        }
+
+        return {
+            period1: {
+                start_date: filters.period1Start,
+                end_date: filters.period1End,
+                revenue: Number(period1Data?.revenue) || 0,
+                total_sales: Number(period1Data?.total_sales) || 0,
+                average_order_value: Number(period1Data?.average_order_value) || 0,
+                total_quantity: Number(period1Data?.total_quantity) || 0,
+                days_with_sales: Number(period1Data?.days_with_sales) || 0
+            },
+            period2: {
+                start_date: filters.period2Start,
+                end_date: filters.period2End,
+                revenue: Number(period2Data?.revenue) || 0,
+                total_sales: Number(period2Data?.total_sales) || 0,
+                average_order_value: Number(period2Data?.average_order_value) || 0,
+                total_quantity: Number(period2Data?.total_quantity) || 0,
+                days_with_sales: Number(period2Data?.days_with_sales) || 0
+            },
+            comparison: {
+                revenue_change: calculatePercentageChange(
+                    Number(period2Data?.revenue) || 0,
+                    Number(period1Data?.revenue) || 0
+                ),
+                sales_change: calculatePercentageChange(
+                    Number(period2Data?.total_sales) || 0,
+                    Number(period1Data?.total_sales) || 0
+                ),
+                average_order_value_change: calculatePercentageChange(
+                    Number(period2Data?.average_order_value) || 0,
+                    Number(period1Data?.average_order_value) || 0
+                ),
+                quantity_change: calculatePercentageChange(
+                    Number(period2Data?.total_quantity) || 0,
+                    Number(period1Data?.total_quantity) || 0
+                ),
+                days_with_sales_change: calculatePercentageChange(
+                    Number(period2Data?.days_with_sales) || 0,
+                    Number(period1Data?.days_with_sales) || 0
+                )
+            }
+        }
+    }
+
+    async compareCategoryRevenue(filters: {
+        startDate?: string;
+        endDate?: string;
+        categoryIds?: string[];
+    }) {
+        const queryBuilder = this.repository
+            .createQueryBuilder('sale')
+            .leftJoin('sale.product', 'product')
+            .leftJoin('product.categoryRelation', 'category')
+            .select('category.id', 'category_id')
+            .addSelect('category.name', 'category_name')
+            .addSelect('SUM(sale.total_amount)', 'revenue')
+            .addSelect('COUNT(sale.id)', 'total_sales')
+            .addSelect('AVG(sale.total_amount)', 'average_order_value')
+            .addSelect('SUM(sale.quantity)', 'total_quantity')
+            .addSelect('COUNT(DISTINCT DATE(sale.sale_date))', 'days_with_sales')
+
+        if (filters.startDate && filters.endDate) {
+            queryBuilder.where('sale.sale_date BETWEEN :startDate AND :endDate', {
+                startDate: new Date(filters.startDate),
+                endDate: new Date(filters.endDate)
+            })
+        } else if (filters.startDate) {
+            queryBuilder.where('sale.sale_date >= :startDate', {
+                startDate: new Date(filters.startDate)
+            })
+        } else if (filters.endDate) {
+            queryBuilder.where('sale.sale_date <= :endDate', {
+                endDate: new Date(filters.endDate)
+            })
+        }
+
+        if (filters.categoryIds && filters.categoryIds.length > 0) {
+            queryBuilder.andWhere('category.id IN (:...categoryIds)', { categoryIds: filters.categoryIds })
+        }
+
+        queryBuilder
+            .groupBy('category.id')
+            .addGroupBy('category.name')
+            .orderBy('revenue', 'DESC')
+
+        const results = await queryBuilder.getRawMany()
+
+        const totalRevenue = results.reduce((sum, category) => sum + Number(category.revenue || 0), 0)
+
+        return results.map(category => ({
+            category_id: category.category_id,
+            category_name: category.category_name,
+            revenue: Number(category.revenue) || 0,
+            revenue_percentage: totalRevenue > 0 ? (Number(category.revenue) / totalRevenue) * 100 : 0,
+            total_sales: Number(category.total_sales) || 0,
+            average_order_value: Number(category.average_order_value) || 0,
+            total_quantity: Number(category.total_quantity) || 0,
+            days_with_sales: Number(category.days_with_sales) || 0
+        }))
+    }
 } 
