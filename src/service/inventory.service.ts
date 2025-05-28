@@ -17,4 +17,29 @@ export class InventoryService {
 
         return await this.inventoryRepository.createInventory(inventory)
     }
+
+    async getInventory(filters: {
+        page?: number;
+        limit?: number;
+        categoryId?: string;
+        sortBy?: string;
+        sortOrder?: 'ASC' | 'DESC';
+    }) {
+        return await this.inventoryRepository.getInventory(filters)
+    }
+
+    async getInventoryAlerts(filters: {
+        page?: number;
+        limit?: number;
+        categoryId?: string;
+    }) {
+        return await this.inventoryRepository.getInventoryAlerts(filters)
+    }
+
+    async updateInventory(id: string, updates: {
+        current_stock?: number;
+        minimum_threshold?: number;
+    }) {
+        return await this.inventoryRepository.updateInventory(id, updates)
+    }
 } 
