@@ -3,14 +3,17 @@ import { Inventory } from '../entities/Inventory'
 import { Product } from '../entities/Product'
 import { Category } from '../entities/Category'
 
+// Manages inventory operations including stock tracking and alerts
 export class InventoryRepository {
     private inventoryRepository = AppDataSource.getRepository(Inventory)
 
+    // Creates a new inventory record for a product
     async createInventory(inventory: Omit<Inventory, 'id' | 'updated_at' | 'product'>) {
         const newInventory = this.inventoryRepository.create(inventory)
         return await this.inventoryRepository.save(newInventory)
     }
 
+    // Retrieves inventory with filtering, sorting, and pagination
     async getInventory(filters: {
         page?: number;
         limit?: number;
@@ -68,6 +71,7 @@ export class InventoryRepository {
         }
     }
 
+    // Gets inventory items that are below their minimum threshold
     async getInventoryAlerts(filters: {
         page?: number;
         limit?: number;
@@ -117,6 +121,7 @@ export class InventoryRepository {
         }
     }
 
+    // Updates inventory stock levels and thresholds
     async updateInventory(id: string, updates: {
         current_stock?: number;
         minimum_threshold?: number;

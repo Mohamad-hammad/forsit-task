@@ -2,14 +2,17 @@ import { Sale } from '../entities/Sale'
 import { Between, FindOptionsWhere } from 'typeorm'
 import { AppDataSource } from '../data-source'
 
+// Handles all database operations related to sales and revenue analytics
 export class SaleRepository {
     private repository = AppDataSource.getRepository(Sale)
 
+    // Creates a new sale record
     async createSale(sale: Omit<Sale, 'id' | 'created_at' | 'product'>) {
         const newSale = this.repository.create(sale)
         return await this.repository.save(newSale)
     }
 
+    // Retrieves sales with filtering and pagination
     async getSales(filters: {
         startDate?: string;
         endDate?: string;
@@ -66,6 +69,7 @@ export class SaleRepository {
         }
     }
 
+    // Calculates daily revenue metrics
     async getDailyRevenue(filters: {
         startDate?: string;
         endDate?: string;
@@ -299,7 +303,15 @@ export class SaleRepository {
             months_with_sales: Number(result.months_with_sales) || 0
         }))
     }
+    /*
 
+     Compares revenue metrics between two periods
+     Percentage changes indicate:
+         - Positive values: Period 2 performed better than Period 1
+         - Negative values: Period 2 performed worse than Period 1
+        - Zero: No change between periods
+     Example: revenue_change: 25 means 25% increase in Period 2
+    */
     async compareRevenue(filters: {
         period1Start: string;
         period1End: string;
@@ -401,7 +413,11 @@ export class SaleRepository {
             }
         }
     }
-
+    /*
+     Compares revenue across categories
+     revenue_percentage shows each category's contribution to total revenue
+     Example: revenue_percentage: 30 means category contributes 30% of total revenue
+    */
     async compareCategoryRevenue(filters: {
         startDate?: string;
         endDate?: string;
