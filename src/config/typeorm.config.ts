@@ -7,16 +7,22 @@ import { Category } from "../entities/Category";
 dotenv.config();
 
 if (!process.env.SUPABASE_DB_URL) {
-    throw new Error('Missing SUPABASE_DB_URL environment variable')
+  throw new Error("Missing SUPABASE_DB_URL environment variable");
 }
 
 export const AppDataSource = new DataSource({
-    type: "postgres",
-    url: process.env.SUPABASE_DB_URL,
-    ssl: {
-        rejectUnauthorized: false
-    },
-    entities: [Product, Inventory, Sale, Category],
-    synchronize: true,
-    logging: true,
+  type: "postgres",
+  url: process.env.SUPABASE_DB_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+  entities: [Product, Inventory, Sale, Category],
+  synchronize: true,
+  logging: true,
+  connectTimeoutMS: 10000,
+  extra: {
+    max: 20,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+  },
 });
