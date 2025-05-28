@@ -1,6 +1,6 @@
-import { AppDataSource } from '../config/typeorm.config'
 import { Sale } from '../entities/Sale'
 import { Between, FindOptionsWhere } from 'typeorm'
+import { AppDataSource } from '../data-source'
 
 export class SaleRepository {
     private repository = AppDataSource.getRepository(Sale)

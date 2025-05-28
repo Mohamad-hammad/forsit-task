@@ -1,4 +1,4 @@
-import { AppDataSource } from '../config/typeorm.config'
+import { AppDataSource } from '../data-source'
 import { Inventory } from '../entities/Inventory'
 import { Product } from '../entities/Product'
 import { Category } from '../entities/Category'

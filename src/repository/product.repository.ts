@@ -1,15 +1,16 @@
-import { supabase } from '../config/supabase.config'
-import { Product } from '../entities/Product'
+import { AppDataSource } from "../data-source";
+import { Product } from "../entities/Product";
 
 export class ProductRepository {
-    async createProduct(product: Omit<Product, 'id' | 'created_at' | 'inventory' | 'categoryRelation'>) {
-        const { data, error } = await supabase
-            .from('products')
-            .insert([product])
-            .select()
-            .single()
+  private repository = AppDataSource.getRepository(Product);
 
-        if (error) throw error
-        return data as Product
-    }
-} 
+  async createProduct(
+    product: Omit<
+      Product,
+      "id" | "created_at" | "inventory" | "categoryRelation"
+    >
+  ) {
+    const newProduct = this.repository.create(product);
+    return await this.repository.save(newProduct);
+  }
+}

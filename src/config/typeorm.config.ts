@@ -1,28 +1,15 @@
 import { DataSource } from "typeorm";
 import dotenv from "dotenv";
-import { Product } from "../entities/Product";
-import { Inventory } from "../entities/Inventory";
-import { Sale } from "../entities/Sale";
-import { Category } from "../entities/Category";
-dotenv.config();
 
-if (!process.env.SUPABASE_DB_URL) {
-  throw new Error("Missing SUPABASE_DB_URL environment variable");
-}
+dotenv.config();
 
 export const AppDataSource = new DataSource({
   type: "postgres",
-  url: process.env.SUPABASE_DB_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-  entities: [Product, Inventory, Sale, Category],
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  entities: ["src/entities/*.ts"],
   synchronize: true,
-  logging: true,
-  connectTimeoutMS: 10000,
-  extra: {
-    max: 20,
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-  },
 });
